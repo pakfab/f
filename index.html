@@ -23,7 +23,7 @@
     justify-content: center;
     align-items: center;
     perspective: 2000px;
-    touch-action: none; /* penting agar gesture tidak dibajak browser */
+    touch-action: none;
     user-select: none;
   }
 
@@ -37,7 +37,7 @@
     opacity: 0;
     transform: rotateY(0deg);
     backface-visibility: hidden;
-    transition: transform 0.8s ease, opacity 0.8s ease;
+    transition: transform 0.9s ease, opacity 0.6s ease;
   }
 
   #flipbook img.active {
@@ -45,22 +45,27 @@
     z-index: 2;
   }
 
-  #flipbook img.flip-left {
-    transform: rotateY(-90deg);
-    opacity: 0;
-  }
-
+  /* ✨ Efek buka halaman kanan (ke depan) */
   #flipbook img.flip-right {
-    transform: rotateY(90deg);
+    transform-origin: left center;
+    transform: rotateY(-100deg);
     opacity: 0;
   }
 
+  /* ✨ Efek buka halaman kiri (kembali ke belakang) */
+  #flipbook img.flip-left {
+    transform-origin: right center;
+    transform: rotateY(100deg);
+    opacity: 0;
+  }
+
+  /* Bayangan lembut di tengah saat aktif */
   #flipbook::before {
     content: '';
     position: absolute;
     width: 100%;
     height: 100%;
-    background: radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, transparent 70%);
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.25) 0%, transparent 70%);
     pointer-events: none;
     z-index: 3;
   }
@@ -88,21 +93,23 @@ const imgs = container.querySelectorAll('img');
 let current = 0;
 let flipping = false;
 
-// fungsi animasi flip
 function show(index, direction = 'right') {
   if (flipping || index === current) return;
   flipping = true;
+
   const oldImg = imgs[current];
   const newImg = imgs[index];
-  oldImg.classList.remove('active');
-  oldImg.classList.add(direction === 'right' ? 'flip-left' : 'flip-right');
 
+  oldImg.classList.remove('active');
+  oldImg.classList.add(direction === 'right' ? 'flip-right' : 'flip-left');
+
+  // Tambahkan efek waktu transisi
   setTimeout(() => {
-    oldImg.classList.remove('flip-left', 'flip-right');
+    oldImg.classList.remove('flip-right', 'flip-left');
     oldImg.style.opacity = 0;
     newImg.classList.add('active');
     flipping = false;
-  }, 800);
+  }, 900);
 
   current = index;
 }
@@ -117,21 +124,13 @@ function prev() {
   show(prevIndex, 'left');
 }
 
-/* ==========================
-   📱 SWIPE TOUCH GESTURE
-   ========================== */
+/* SWIPE TOUCH */
 let startX = 0;
 let isSwiping = false;
-
 container.addEventListener('touchstart', e => {
   startX = e.touches[0].clientX;
   isSwiping = true;
 });
-
-container.addEventListener('touchmove', e => {
-  if (isSwiping) e.preventDefault();
-});
-
 container.addEventListener('touchend', e => {
   if (!isSwiping) return;
   const diff = e.changedTouches[0].clientX - startX;
@@ -139,34 +138,26 @@ container.addEventListener('touchend', e => {
   isSwiping = false;
 });
 
-/* ==========================
-   🖱️ MOUSE DRAG GESTURE
-   ========================== */
+/* MOUSE DRAG */
 let mouseDown = false;
 let mouseStartX = 0;
-
 container.addEventListener('mousedown', e => {
   mouseDown = true;
   mouseStartX = e.clientX;
 });
-
 container.addEventListener('mouseup', e => {
   if (!mouseDown) return;
   const diff = e.clientX - mouseStartX;
   if (Math.abs(diff) > 50) diff < 0 ? next() : prev();
   mouseDown = false;
 });
-
 container.addEventListener('mouseleave', () => mouseDown = false);
 
-/* ==========================
-   ⌨️ KEYBOARD ARROWS
-   ========================== */
+/* KEYBOARD */
 document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight') next();
   if (e.key === 'ArrowLeft') prev();
 });
 </script>
-
 </body>
 </html>

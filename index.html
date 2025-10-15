@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flipbook PMB SMAZA 2025</title>
+<title>Flipbook PMB SMAZA 16 2026/2027</title>
 <style>
   html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background: #111;
+    background: #000;
     height: 100%;
     width: 100%;
   }
@@ -22,91 +22,115 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    perspective: 2000px;
   }
 
   #flipbook img {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    transition: transform 0.6s ease, opacity 0.6s ease;
     position: absolute;
     top: 0;
     left: 0;
+    opacity: 0;
+    transform: rotateY(0deg);
+    backface-visibility: hidden;
+    transition: transform 0.8s ease, opacity 0.8s ease;
   }
 
-  #flipbook img.hidden {
-    opacity: 0;
-    pointer-events: none;
+  #flipbook img.active {
+    opacity: 1;
+    z-index: 2;
   }
+
+  #flipbook img.flip-left {
+    transform: rotateY(-90deg);
+    opacity: 0;
+  }
+
+  #flipbook img.flip-right {
+    transform: rotateY(90deg);
+    opacity: 0;
+  }
+
+  #flipbook::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 3;
+  }
+
 </style>
 </head>
 <body>
 <div id="flipbook"></div>
 
 <script>
-  // Konfigurasi
-  const IMG_FOLDER = './img/';
-  const TOTAL_PAGES = 12; // ganti sesuai jumlah gambar
-  const BASE_NAME = 'FLIPBOOK PMB 20262027_20251015_153943_0000 '; // nama dasar file
-
-  // Generate nama file otomatis
-  const images = Array.from({ length: TOTAL_PAGES }, (_, i) => 
-    `${BASE_NAME}${i + 1}.jpeg`
-  );
+async function loadImages() {
+  const res = await fetch('./img/images.json');
+  const files = await res.json();
 
   const container = document.getElementById('flipbook');
-  let currentIndex = 0;
-
-  // Buat elemen img untuk semua halaman
-  images.forEach((src, i) => {
+  files.forEach((src, i) => {
     const img = document.createElement('img');
-    img.src = IMG_FOLDER + src;
-    img.classList.toggle('hidden', i !== 0);
+    img.src = './img/' + src;
+    if (i === 0) img.classList.add('active');
     container.appendChild(img);
   });
 
   const imgs = container.querySelectorAll('img');
+  let current = 0;
+  let flipping = false;
 
-  // Fungsi tampilkan halaman
-  function showPage(index) {
-    imgs.forEach((img, i) => {
-      img.classList.toggle('hidden', i !== index);
-    });
+  function show(index, direction = 'right') {
+    if (flipping || index === current) return;
+    flipping = true;
+
+    const oldImg = imgs[current];
+    const newImg = imgs[index];
+
+    oldImg.classList.remove('active');
+    oldImg.classList.add(direction === 'right' ? 'flip-left' : 'flip-right');
+
+    setTimeout(() => {
+      oldImg.classList.remove('flip-left', 'flip-right');
+      oldImg.style.opacity = 0;
+      newImg.classList.add('active');
+      flipping = false;
+    }, 800);
+
+    current = index;
   }
 
-  // Deteksi swipe
+  function next() {
+    const nextIndex = (current + 1) % imgs.length;
+    show(nextIndex, 'right');
+  }
+
+  function prev() {
+    const prevIndex = (current - 1 + imgs.length) % imgs.length;
+    show(prevIndex, 'left');
+  }
+
+  // swipe gesture
   let startX = 0;
-  let endX = 0;
-
-  container.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX;
-  });
-
+  container.addEventListener('touchstart', e => startX = e.touches[0].clientX);
   container.addEventListener('touchend', e => {
-    endX = e.changedTouches[0].clientX;
-    const diff = endX - startX;
-    if (Math.abs(diff) > 50) {
-      if (diff < 0) nextPage();
-      else prevPage();
-    }
+    const diff = e.changedTouches[0].clientX - startX;
+    if (Math.abs(diff) > 50) diff < 0 ? next() : prev();
   });
 
-  // Fungsi navigasi halaman
-  function nextPage() {
-    currentIndex = (currentIndex + 1) % images.length;
-    showPage(currentIndex);
-  }
-
-  function prevPage() {
-    currentIndex = (currentIndex - 1 + images.length) % images.length;
-    showPage(currentIndex);
-  }
-
-  // Keyboard opsional (boleh hapus kalau tak perlu)
+  // keyboard (optional)
   document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight') nextPage();
-    if (e.key === 'ArrowLeft') prevPage();
+    if (e.key === 'ArrowRight') next();
+    if (e.key === 'ArrowLeft') prev();
   });
+}
+
+loadImages();
 </script>
 </body>
 </html>

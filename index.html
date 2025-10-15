@@ -7,157 +7,170 @@
 <style>
   html, body {
     margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: #000;
     height: 100%;
-    width: 100%;
-  }
-
-  #flipbook {
-    position: relative;
-    width: 100%;
-    height: 100vh;
+    background: #111;
     overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    perspective: 2000px;
-    touch-action: none;
-    user-select: none;
   }
 
-  #flipbook img {
+  #book {
+    position: relative;
+    width: 90vw;
+    height: 90vh;
+    margin: auto;
+    top: 5vh;
+    perspective: 2000px;
+  }
+
+  .page {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    background: #222;
+    overflow: hidden;
+    transform-style: preserve-3d;
+    transition: transform 1s ease, box-shadow 1s ease;
+    backface-visibility: hidden;
+    box-shadow: 0 0 20px rgba(0,0,0,0.4);
+  }
+
+  .page img {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    backface-visibility: hidden;
+  }
+
+  /* sisi kanan */
+  .page.right {
+    left: 50%;
+    transform-origin: left center;
+    z-index: calc(100 - var(--i));
+  }
+
+  /* sisi kiri */
+  .page.left {
+    left: 0;
+    transform-origin: right center;
+    z-index: calc(100 - var(--i));
+  }
+
+  /* efek bayangan di tepi dalam halaman */
+  .shadow {
     position: absolute;
     top: 0;
-    left: 0;
-    opacity: 0;
-    transform: rotateY(0deg);
-    backface-visibility: hidden;
-    transition: transform 0.9s ease, opacity 0.6s ease;
-  }
-
-  #flipbook img.active {
-    opacity: 1;
-    z-index: 2;
-  }
-
-  /* ✨ Efek buka halaman kanan (ke depan) */
-  #flipbook img.flip-right {
-    transform-origin: 10% center;
-    transform: rotateY(-100deg);
-    opacity: 0;
-  }
-
-  /* ✨ Efek buka halaman kiri (kembali ke belakang) */
-  #flipbook img.flip-left {
-    transform-origin: 90% center;
-    transform: rotateY(100deg);
-    opacity: 0;
-  }
-
-  /* Bayangan lembut di tengah saat aktif */
-  #flipbook::before {
-    content: '';
-    position: absolute;
-    width: 100%;
+    width: 30%;
     height: 100%;
-    background: radial-gradient(ellipse at center, rgba(0,0,0,0.25) 0%, transparent 70%);
     pointer-events: none;
-    z-index: 3;
+    background: linear-gradient(to right, rgba(0,0,0,0.5), transparent);
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+  .page.left .shadow {
+    right: 0;
+    background: linear-gradient(to left, rgba(0,0,0,0.5), transparent);
+  }
+
+  /* animasi buka */
+  .page.open.left {
+    transform: rotateY(-180deg);
+    box-shadow: -5px 0 20px rgba(0,0,0,0.5);
+  }
+
+  .page.open.right {
+    transform: rotateY(180deg);
+    box-shadow: 5px 0 20px rgba(0,0,0,0.5);
+  }
+
+  /* saat buka, munculkan efek bayangan tengah */
+  .page.open .shadow {
+    opacity: 1;
+  }
+
+  /* efek gradasi tengah buku */
+  #center-shadow {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 4%;
+    height: 100%;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, transparent 80%);
+    transform: translateX(-50%);
+    z-index: 200;
+    pointer-events: none;
   }
 </style>
 </head>
 <body>
-<div id="flipbook"></div>
+
+<div id="book">
+  <div id="center-shadow"></div>
+</div>
 
 <script>
-const IMG_FOLDER = './img/';
-const BASE_NAME = 'FLIPBOOK PMB 20262027_20251015_153943_0000 ';
-const TOTAL_PAGES = 12; // ubah sesuai jumlah halaman
+const IMG_FOLDER = "./img/";
+const BASE_NAME = "FLIPBOOK PMB 20262027_20251015_153943_0000 ";
+const TOTAL_PAGES = 12;
 
-const container = document.getElementById('flipbook');
+const book = document.getElementById("book");
 
-// buat elemen gambar otomatis
+// Buat halaman kiri dan kanan otomatis
 for (let i = 1; i <= TOTAL_PAGES; i++) {
-  const img = document.createElement('img');
-  img.src = IMG_FOLDER + BASE_NAME + i + '.jpeg';
-  if (i === 1) img.classList.add('active');
-  container.appendChild(img);
+  const page = document.createElement("div");
+  page.classList.add("page");
+  page.classList.add(i % 2 === 0 ? "right" : "left");
+  page.style.setProperty('--i', i);
+
+  const img = document.createElement("img");
+  img.src = IMG_FOLDER + BASE_NAME + i + ".jpeg";
+  page.appendChild(img);
+
+  // tambahkan shadow efek di dalam halaman
+  const shadow = document.createElement("div");
+  shadow.classList.add("shadow");
+  page.appendChild(shadow);
+
+  book.appendChild(page);
 }
 
-const imgs = container.querySelectorAll('img');
-let current = 0;
-let flipping = false;
+let currentPage = 1;
+const pages = document.querySelectorAll(".page");
 
-function show(index, direction = 'right') {
-  if (flipping || index === current) return;
-  flipping = true;
-
-  const oldImg = imgs[current];
-  const newImg = imgs[index];
-
-  oldImg.classList.remove('active');
-  oldImg.classList.add(direction === 'right' ? 'flip-right' : 'flip-left');
-
-  // Tambahkan efek waktu transisi
-  setTimeout(() => {
-    oldImg.classList.remove('flip-right', 'flip-left');
-    oldImg.style.opacity = 0;
-    newImg.classList.add('active');
-    flipping = false;
-  }, 900);
-
-  current = index;
+// fungsi buka/tutup
+function nextPage() {
+  if (currentPage < TOTAL_PAGES) {
+    pages[currentPage - 1].classList.add("open");
+    currentPage++;
+  }
 }
 
-function next() {
-  const nextIndex = (current + 1) % imgs.length;
-  show(nextIndex, 'right');
+function prevPage() {
+  if (currentPage > 1) {
+    currentPage--;
+    pages[currentPage - 1].classList.remove("open");
+  }
 }
 
-function prev() {
-  const prevIndex = (current - 1 + imgs.length) % imgs.length;
-  show(prevIndex, 'left');
-}
+// navigasi keyboard
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") nextPage();
+  if (e.key === "ArrowLeft") prevPage();
+});
 
-/* SWIPE TOUCH */
+// gesture mouse
 let startX = 0;
-let isSwiping = false;
-container.addEventListener('touchstart', e => {
-  startX = e.touches[0].clientX;
-  isSwiping = true;
+book.addEventListener("mousedown", e => startX = e.clientX);
+book.addEventListener("mouseup", e => {
+  const diff = e.clientX - startX;
+  if (Math.abs(diff) > 50) diff < 0 ? nextPage() : prevPage();
 });
-container.addEventListener('touchend', e => {
-  if (!isSwiping) return;
+
+// gesture sentuh (mobile)
+book.addEventListener("touchstart", e => startX = e.touches[0].clientX);
+book.addEventListener("touchend", e => {
   const diff = e.changedTouches[0].clientX - startX;
-  if (Math.abs(diff) > 50) diff < 0 ? next() : prev();
-  isSwiping = false;
-});
-
-/* MOUSE DRAG */
-let mouseDown = false;
-let mouseStartX = 0;
-container.addEventListener('mousedown', e => {
-  mouseDown = true;
-  mouseStartX = e.clientX;
-});
-container.addEventListener('mouseup', e => {
-  if (!mouseDown) return;
-  const diff = e.clientX - mouseStartX;
-  if (Math.abs(diff) > 50) diff < 0 ? next() : prev();
-  mouseDown = false;
-});
-container.addEventListener('mouseleave', () => mouseDown = false);
-
-/* KEYBOARD */
-document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowRight') next();
-  if (e.key === 'ArrowLeft') prev();
+  if (Math.abs(diff) > 50) diff < 0 ? nextPage() : prevPage();
 });
 </script>
+
 </body>
 </html>

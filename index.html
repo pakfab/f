@@ -1,176 +1,527 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flipbook PMB SMAZA 16 2026/2027</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+<title>Flipbook 3D — PMB SMAZA 16</title>
 <style>
-  html, body {
-    margin: 0;
-    height: 100%;
-    background: #111;
-    overflow: hidden;
+  :root{
+    --bg:#0b0b0b;
+    --book-w: 1000px; /* ideal width, responsive scaled */
+    --book-h: 640px;
+    --page-shadow: rgba(0,0,0,0.45);
+    --page-highlight: rgba(255,255,255,0.06);
+  }
+  html,body{height:100%;margin:0;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:system-ui,Segoe UI,Roboto,Arial}
+  /* container scales responsively */
+  .stage{
+    width: min(var(--book-w), 96vw);
+    height: calc(min(var(--book-h), 70vh));
+    position:relative;
+    perspective:2200px;
+    -webkit-perspective:2200px;
+    touch-action:none;
+    user-select:none;
+    overflow:hidden;
   }
 
-  #book {
-    position: relative;
-    width: 90vw;
-    height: 90vh;
-    margin: auto;
-    top: 5vh;
-    perspective: 2000px;
+  /* book area centered */
+  .book {
+    width:100%;
+    height:100%;
+    position:relative;
+    transform-style:preserve-3d;
   }
 
+  /* the central gutter (visual only) */
+  .gutter {
+    position:absolute;
+    left:50%;
+    top:0;
+    bottom:0;
+    width:2px;
+    transform:translateX(-50%);
+    pointer-events:none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.15));
+    mix-blend-mode:overlay;
+    z-index:300;
+  }
+
+  /* center subtle shadow */
+  .center-shadow {
+    position:absolute;
+    left:50%;
+    top:0;
+    bottom:0;
+    width:6%;
+    transform:translateX(-50%);
+    background: linear-gradient(90deg, rgba(0,0,0,0.35), rgba(0,0,0,0.02) 60%, transparent 80%);
+    pointer-events:none;
+    z-index:290;
+    border-radius:2px;
+  }
+
+  /* page wrapper for each side (left or right in spread) */
+  .side {
+    position:absolute;
+    top:0;
+    height:100%;
+    width:50%;
+    overflow:visible;
+    transform-style:preserve-3d;
+    -webkit-transform-style:preserve-3d;
+  }
+  .side.left{ left:0; transform-origin: right center; }
+  .side.right{ left:50%; transform-origin: left center; }
+
+  /* stack of page elements (each page has front/back surfaces) */
   .page {
-    position: absolute;
-    width: 50%;
-    height: 100%;
-    background: #222;
-    overflow: hidden;
-    transform-style: preserve-3d;
-    transition: transform 1s ease, box-shadow 1s ease;
-    backface-visibility: hidden;
-    box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    position:absolute;
+    top:0;
+    height:100%;
+    width:200%; /* double width so front/back can overlap during fold */
+    left:0;
+    transform-style:preserve-3d;
+    -webkit-transform-style:preserve-3d;
+    pointer-events:auto;
   }
 
-  .page img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    backface-visibility: hidden;
+  /* front/back faces */
+  .face {
+    position:absolute;
+    top:0;
+    height:100%;
+    width:50%; /* one face occupies half of page element */
+    overflow:hidden;
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+    box-shadow: 0 6px 30px var(--page-shadow);
+    border-radius:4px;
   }
 
-  /* sisi kanan */
-  .page.right {
-    left: 50%;
-    transform-origin: left center;
-    z-index: calc(100 - var(--i));
+  /* face for visible image */
+  .face img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    display:block;
+    pointer-events:none;
+    -webkit-user-drag:none;
   }
 
-  /* sisi kiri */
-  .page.left {
-    left: 0;
-    transform-origin: right center;
-    z-index: calc(100 - var(--i));
+  /* left side faces: front sits on right half of page element */
+  .side.left .page .face.front{
+    right:0;
+    left:auto;
+    transform-origin:right center;
+  }
+  .side.left .page .face.back{
+    left:0;
+    transform-origin:left center;
+    transform: rotateY(180deg); /* back face flipped initially */
   }
 
-  /* efek bayangan di tepi dalam halaman */
-  .shadow {
-    position: absolute;
-    top: 0;
-    width: 30%;
-    height: 100%;
-    pointer-events: none;
-    background: linear-gradient(to right, rgba(0,0,0,0.5), transparent);
-    opacity: 0;
-    transition: opacity 0.8s ease;
+  /* right side faces: front sits on left half */
+  .side.right .page .face.front{
+    left:0;
+    transform-origin:left center;
   }
-  .page.left .shadow {
-    right: 0;
-    background: linear-gradient(to left, rgba(0,0,0,0.5), transparent);
-  }
-
-  /* animasi buka */
-  .page.open.left {
-    transform: rotateY(-180deg);
-    box-shadow: -5px 0 20px rgba(0,0,0,0.5);
-  }
-
-  .page.open.right {
+  .side.right .page .face.back{
+    right:0;
+    left:auto;
+    transform-origin:right center;
     transform: rotateY(180deg);
-    box-shadow: 5px 0 20px rgba(0,0,0,0.5);
   }
 
-  /* saat buka, munculkan efek bayangan tengah */
-  .page.open .shadow {
-    opacity: 1;
+  /* styling for animated page folding (we will apply transforms via JS) */
+  .folding {
+    transition: transform 0.5s cubic-bezier(.22,.9,.2,1);
   }
 
-  /* efek gradasi tengah buku */
-  #center-shadow {
-    position: absolute;
-    left: 50%;
-    top: 0;
-    width: 4%;
-    height: 100%;
-    background: radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, transparent 80%);
-    transform: translateX(-50%);
-    z-index: 200;
-    pointer-events: none;
+  /* shadow overlays to simulate curve & thickness */
+  .curve-shadow{
+    position:absolute;
+    top:0; bottom:0;
+    width:50%;
+    pointer-events:none;
+    z-index:250;
+    opacity:0;
+    transition:opacity .25s;
+  }
+  .curve-shadow.left{ right:0; background: linear-gradient(90deg, rgba(0,0,0,0.5), rgba(0,0,0,0)); }
+  .curve-shadow.right{ left:0; background: linear-gradient(270deg, rgba(0,0,0,0.5), rgba(0,0,0,0)); }
+
+  /* highlight line along fold */
+  .fold-highlight{
+    position:absolute;
+    top:0; bottom:0;
+    width:2px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.02));
+    z-index:280;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .2s;
+  }
+
+  /* small responsive tweak for small screens */
+  @media (max-width:700px){
+    :root{ --book-w: 700px; --book-h: 480px; }
   }
 </style>
 </head>
 <body>
 
-<div id="book">
-  <div id="center-shadow"></div>
+<div class="stage" id="stage">
+  <div class="book" id="book">
+    <div class="gutter"></div>
+    <div class="center-shadow" id="centerShadow"></div>
+    <!-- sides will be rendered by JS -->
+  </div>
 </div>
 
 <script>
-const IMG_FOLDER = "./img/";
-const BASE_NAME = "FLIPBOOK PMB 20262027_20251015_153943_0000 ";
-const TOTAL_PAGES = 12;
+/* ====== CONFIG (fallback if images.json not found) ====== */
+const FALLBACK = {
+  BASE_NAME: 'FLIPBOOK PMB 20262027_20251015_153943_0000 ',
+  EXT: '.jpeg', // change to .png if your files are png
+  TOTAL_PAGES: 12
+};
+/* ======================================================= */
 
-const book = document.getElementById("book");
-
-// Buat halaman kiri dan kanan otomatis
-for (let i = 1; i <= TOTAL_PAGES; i++) {
-  const page = document.createElement("div");
-  page.classList.add("page");
-  page.classList.add(i % 2 === 0 ? "right" : "left");
-  page.style.setProperty('--i', i);
-
-  const img = document.createElement("img");
-  img.src = IMG_FOLDER + BASE_NAME + i + ".jpeg";
-  page.appendChild(img);
-
-  // tambahkan shadow efek di dalam halaman
-  const shadow = document.createElement("div");
-  shadow.classList.add("shadow");
-  page.appendChild(shadow);
-
-  book.appendChild(page);
-}
-
-let currentPage = 1;
-const pages = document.querySelectorAll(".page");
-
-// fungsi buka/tutup
-function nextPage() {
-  if (currentPage < TOTAL_PAGES) {
-    pages[currentPage - 1].classList.add("open");
-    currentPage++;
+/* Utility: try fetch images.json, else use fallback */
+async function loadImageList(){
+  try {
+    const r = await fetch('./img/images.json', {cache:'no-cache'});
+    if(!r.ok) throw new Error('no manifest');
+    const arr = await r.json();
+    if(Array.isArray(arr) && arr.length) return arr;
+    throw new Error('manifest empty');
+  } catch(e) {
+    // fallback: generate "BASE_NAME 1.ext" .. up to TOTAL_PAGES
+    const arr = [];
+    for(let i=1;i<=FALLBACK.TOTAL_PAGES;i++){
+      arr.push(FALLBACK.BASE_NAME + i + FALLBACK.EXT);
+    }
+    console.warn('Using fallback image list', e);
+    return arr;
   }
 }
 
-function prevPage() {
-  if (currentPage > 1) {
-    currentPage--;
-    pages[currentPage - 1].classList.remove("open");
+/* Build book DOM as spreads:
+   cover (page 1) alone,
+   then pairs (2+3,4+5,...),
+   back cover alone if odd count.
+   We'll create page elements for each leaf (each leaf = 1 page sheet with front/back).
+*/
+function buildBook(images){
+  const book = document.getElementById('book');
+  // clear existing sides (except gutter and center shadow)
+  [...book.querySelectorAll('.side')].forEach(n=>n.remove());
+
+  // convert images array -> leaves(front/back)
+  // Note: images are pages in order: 1..N. We want sheets:
+  // sheet 0: front = page1 (cover) alone shown on right side (cover)
+  // following sheets: (page2 left, page3 right) as spread? Standard: when open,
+  // left=even page, right=odd page? But simpler: we will create an array of spreads:
+  // Spread sequence:
+  //  - Spread 0: cover alone on right (we implement as right side with only one face)
+  //  - Spreads 1..k: pairs [page2, page3], [page4,page5], ...
+  //  - Last: back alone if needed.
+  const n = images.length;
+  const spreads = [];
+
+  // cover (page 1) alone on right
+  spreads.push({left:null, right:images[0]});
+
+  // create pairs starting at page 2 (index 1)
+  let i = 1;
+  while(i+1 < n){
+    spreads.push({left:images[i], right:images[i+1]});
+    i += 2;
   }
+  // if last page remains (odd count), push back cover alone on left
+  if(i < n){
+    spreads.push({left:images[i], right:null});
+  }
+
+  // For each spread create side.left and side.right groups stacked.
+  // We'll maintain a stack index (z-index) so later spreads appear behind earlier ones.
+  spreads.forEach((sp, idx) => {
+    // create left side element (for left page in spread)
+    const sideLeft = document.createElement('div');
+    sideLeft.className = 'side left';
+    sideLeft.style.zIndex = (500 - idx*2); // stacking
+    // same for right
+    const sideRight = document.createElement('div');
+    sideRight.className = 'side right';
+    sideRight.style.zIndex = (500 - idx*2 + 1);
+
+    // Create page element for each side: hold front & back faces.
+    // We will create one .page per side, with .face.front and .face.back
+    function makePage(imgSrc, sideType, pageIndex){
+      const page = document.createElement('div');
+      page.className = 'page';
+      page.dataset.spread = idx;
+      page.dataset.side = sideType;
+      page.dataset.index = pageIndex ?? '';
+      // create front face
+      const front = document.createElement('div');
+      front.className = 'face front';
+      const imgF = document.createElement('img');
+      if(imgSrc) imgF.src = './img/' + imgSrc;
+      front.appendChild(imgF);
+      // create back face (showing the back of sheet)
+      const back = document.createElement('div');
+      back.className = 'face back';
+      const imgB = document.createElement('img');
+      // back face we show next logical page when folded; leave blank or show next
+      back.appendChild(imgB);
+      page.appendChild(front);
+      page.appendChild(back);
+      return page;
+    }
+
+    // Left face
+    const leftPageEl = makePage(sp.left, 'left', idx*2);
+    // Right face
+    const rightPageEl = makePage(sp.right, 'right', idx*2+1);
+
+    sideLeft.appendChild(leftPageEl);
+    sideRight.appendChild(rightPageEl);
+
+    // add folding overlay (for curve shadow)
+    const curveL = document.createElement('div');
+    curveL.className = 'curve-shadow left';
+    const hlL = document.createElement('div'); hlL.className='fold-highlight'; hlL.style.right='0'; hlL.style.left='auto';
+    sideLeft.appendChild(curveL); sideLeft.appendChild(hlL);
+
+    const curveR = document.createElement('div');
+    curveR.className = 'curve-shadow right';
+    const hlR = document.createElement('div'); hlR.className='fold-highlight'; hlR.style.left='50%';
+    sideRight.appendChild(curveR); sideRight.appendChild(hlR);
+
+    // append to book container in order: earlier spreads on top
+    book.appendChild(sideLeft);
+    book.appendChild(sideRight);
+  });
+
+  // return spreads count for navigation logic
+  return spreads.length;
 }
 
-// navigasi keyboard
-document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowRight") nextPage();
-  if (e.key === "ArrowLeft") prevPage();
-});
+/* Navigation state and animation logic */
+function initInteractions(spreadCount){
+  const stage = document.getElementById('stage');
+  const book = document.getElementById('book');
+  const centerX = () => book.getBoundingClientRect().left + book.clientWidth/2;
 
-// gesture mouse
-let startX = 0;
-book.addEventListener("mousedown", e => startX = e.clientX);
-book.addEventListener("mouseup", e => {
-  const diff = e.clientX - startX;
-  if (Math.abs(diff) > 50) diff < 0 ? nextPage() : prevPage();
-});
+  // current spread index (0-based). 0 => cover view, 1.. => spreads
+  let currentSpread = 0;
+  const maxSpread = spreadCount - 1;
 
-// gesture sentuh (mobile)
-book.addEventListener("touchstart", e => startX = e.touches[0].clientX);
-book.addEventListener("touchend", e => {
-  const diff = e.changedTouches[0].clientX - startX;
-  if (Math.abs(diff) > 50) diff < 0 ? nextPage() : prevPage();
-});
+  // helper: find side elements for spread index
+  function getSideElements(spIndex){
+    // sides created in order: for each spread two sides appended
+    // query by data-spread attribute
+    const left = book.querySelector(`.side.left .page[data-spread="${spIndex}"]`)?.parentElement;
+    const right = book.querySelector(`.side.right .page[data-spread="${spIndex}"]`)?.parentElement;
+    return {left, right};
+  }
+
+  // apply a folded transform on a page element (pageWrapper .page)
+  // progress: 0..1 where 0=closed, 1=fully turned
+  // direction: 'next' (turn right page to the left) or 'prev'
+  function applyFold(pageWrapper, side, progress, direction){
+    // clamp
+    progress = Math.max(0, Math.min(1, progress));
+    const page = pageWrapper; // .page
+    // calculate angle: 0 -> 0deg, 1 ->  -180deg for right side turning left, or +180 for left turning right
+    const angle = direction === 'next' ? (-180 * progress) : (180 * progress);
+    // apply perspective + curl fudge with slight skew depending on progress to mimic curvature
+    const skew = (direction === 'next' ? -1 : 1) * (10 * progress); // slight skew
+    const translate = (direction === 'next' ? -1 : 1) * (2 * progress); // small translate
+    page.style.transform = `translateZ(1px) rotateY(${angle}deg) skewY(${skew}deg) translateX(${translate}px)`;
+    page.classList.add('folding');
+
+    // adjust shadow overlay visibility on parent side
+    const sideEl = page.parentElement;
+    const curve = sideEl.querySelector('.curve-shadow');
+    const hl = sideEl.querySelector('.fold-highlight');
+    if(curve) curve.style.opacity = Math.min(1, 0.9 * progress);
+    if(hl) hl.style.opacity = Math.min(1, 0.9 * progress);
+  }
+
+  function resetFold(pageWrapper){
+    pageWrapper.style.transform = '';
+    pageWrapper.classList.remove('folding');
+    const sideEl = pageWrapper.parentElement;
+    const curve = sideEl.querySelector('.curve-shadow');
+    const hl = sideEl.querySelector('.fold-highlight');
+    if(curve) curve.style.opacity = 0;
+    if(hl) hl.style.opacity = 0;
+  }
+
+  // animate complete turn to next spread
+  function animateTurn(spIndex, toNext=true){
+    // find the page to fold: if turning next from spread i -> fold right side of spread i (the right .page in that spread)
+    const sideName = toNext ? 'right' : 'left';
+    const pageWrapper = book.querySelector(`.side.${sideName} .page[data-spread="${spIndex}"]`);
+    if(!pageWrapper) return Promise.resolve();
+
+    return new Promise(resolve=>{
+      // smooth animate using requestAnimationFrame
+      const start = performance.now();
+      const duration = 520;
+      function step(t){
+        const p = Math.min(1, (t - start)/duration);
+        applyFold(pageWrapper, sideName, p, toNext ? 'next' : 'prev');
+        if(p < 1) requestAnimationFrame(step);
+        else {
+          // finalize: if next, we need to push that spread index forward
+          if(toNext) {
+            // fold completed: increase currentSpread
+            currentSpread = Math.min(maxSpread, currentSpread + 1);
+          } else {
+            currentSpread = Math.max(0, currentSpread -1);
+          }
+          // reset transform (but keep final visual by toggling z-index / order)
+          resetFold(pageWrapper);
+          // reorder z-index to simulate page moved to back/front:
+          reorderAfterTurn(spIndex, toNext);
+          resolve();
+        }
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  // Reorder DOM after a full turn so visual stacking feels right.
+  function reorderAfterTurn(spIndex, turnedNext){
+    // Simple approach: after turning next we move that right side element to back (lower z-index),
+    // after turning prev we move left side to front.
+    const leftSide = book.querySelector(`.side.left .page[data-spread="${spIndex}"]`)?.parentElement;
+    const rightSide = book.querySelector(`.side.right .page[data-spread="${spIndex}"]`)?.parentElement;
+    if(turnedNext){
+      // move rightSide to back: reduce z-index
+      if(rightSide) rightSide.style.zIndex = 100 - (spIndex*2 + 1);
+    } else {
+      if(leftSide) leftSide.style.zIndex = 100 - (spIndex*2);
+    }
+  }
+
+  // Quick tap: advance by one spread or go back if tapped left half.
+  book.addEventListener('click', (ev)=>{
+    // ignore if user was dragging
+    if(dragState.active && Math.abs(dragState.dx) > 10) return;
+    const x = ev.clientX;
+    const mid = centerX();
+    if(x > mid) {
+      // attempt next
+      if(currentSpread < maxSpread) animateTurn(currentSpread, true);
+    } else {
+      if(currentSpread > 0) animateTurn(currentSpread-1, false);
+    }
+  });
+
+  // DRAG interactions: support mouse and touch with continuous fold preview
+  const dragState = { active:false, startX:0, pageWrapper:null, side:null };
+
+  function startDrag(clientX){
+    dragState.active = true;
+    dragState.startX = clientX;
+    dragState.dx = 0;
+    // decide which side we will fold based on start position relative to mid
+    const mid = centerX();
+    dragState.side = (clientX > mid) ? 'right' : 'left';
+    // pageWrapper is the page we fold for currentSpread (if side right -> spread=currentSpread; if side left -> spread=currentSpread-1)
+    let targetSpread = (dragState.side === 'right') ? currentSpread : Math.max(0, currentSpread - 1);
+    dragState.pageWrapper = book.querySelector(`.side.${dragState.side} .page[data-spread="${targetSpread}"]`);
+    dragState.targetSpread = targetSpread;
+  }
+
+  function moveDrag(clientX){
+    if(!dragState.active) return;
+    dragState.dx = clientX - dragState.startX;
+    // compute progress from dx relative to half width
+    const halfW = book.clientWidth / 2;
+    // depending on side, positive dx means different direction
+    let raw;
+    if(dragState.side === 'right'){
+      // user drags left to turn page to left: dx negative -> progress positive
+      raw = -dragState.dx / halfW;
+    } else {
+      // user drags right to turn left page to right: dx positive -> progress positive
+      raw = dragState.dx / halfW;
+    }
+    const progress = Math.max(0, Math.min(1, raw));
+    if(dragState.pageWrapper) applyFold(dragState.pageWrapper, dragState.side, progress, (dragState.side==='right') ? 'next' : 'prev');
+  }
+
+  function endDrag(){
+    if(!dragState.active) return;
+    dragState.active = false;
+    // decide commit threshold
+    const commit = Math.abs(dragState.dx) > (book.clientWidth * 0.15);
+    if(commit){
+      if(dragState.side === 'right' && dragState.dx < 0 && currentSpread < maxSpread){
+        animateTurn(dragState.targetSpread, true);
+      } else if(dragState.side === 'left' && dragState.dx > 0 && currentSpread > 0){
+        animateTurn(dragState.targetSpread, false);
+      } else {
+        // revert animation
+        if(dragState.pageWrapper) resetFold(dragState.pageWrapper);
+      }
+    } else {
+      // revert
+      if(dragState.pageWrapper) resetFold(dragState.pageWrapper);
+    }
+    dragState.pageWrapper = null;
+  }
+
+  // mouse events
+  book.addEventListener('mousedown', (e)=>{
+    e.preventDefault();
+    startDrag(e.clientX);
+  });
+  window.addEventListener('mousemove', (e)=> {
+    if(dragState.active) {
+      moveDrag(e.clientX);
+    }
+  });
+  window.addEventListener('mouseup', (e)=>{
+    if(dragState.active) endDrag();
+  });
+
+  // touch events
+  book.addEventListener('touchstart', (e)=>{
+    const t = e.touches[0];
+    startDrag(t.clientX);
+  }, {passive:true});
+  book.addEventListener('touchmove', (e)=>{
+    if(!dragState.active) return;
+    const t = e.touches[0];
+    moveDrag(t.clientX);
+  }, {passive:true});
+  book.addEventListener('touchend', (e)=>{
+    if(dragState.active) endDrag();
+  });
+
+  // keyboard navigation
+  window.addEventListener('keydown', (e)=>{
+    if(e.key === 'ArrowRight') {
+      if(currentSpread < maxSpread) animateTurn(currentSpread, true);
+    } else if(e.key === 'ArrowLeft') {
+      if(currentSpread > 0) animateTurn(currentSpread-1, false);
+    }
+  });
+}
+
+/* Orchestrator: load images, build book, init interactions */
+(async function init(){
+  const images = await loadImageList(); // images are filenames relative to /img/
+  const spreadCount = buildBook(images);
+  initInteractions(spreadCount);
+})();
 </script>
-
 </body>
 </html>

@@ -74,6 +74,8 @@ const BASE_NAME = 'FLIPBOOK PMB 20262027_20251015_153943_0000 ';
 const TOTAL_PAGES = 12; // ubah sesuai jumlah halaman
 
 const container = document.getElementById('flipbook');
+
+// generate image elements
 for (let i = 1; i <= TOTAL_PAGES; i++) {
   const img = document.createElement('img');
   img.src = IMG_FOLDER + BASE_NAME + i + '.jpeg';
@@ -92,12 +94,14 @@ function show(index, direction = 'right') {
   const newImg = imgs[index];
   oldImg.classList.remove('active');
   oldImg.classList.add(direction === 'right' ? 'flip-left' : 'flip-right');
+
   setTimeout(() => {
     oldImg.classList.remove('flip-left', 'flip-right');
     oldImg.style.opacity = 0;
     newImg.classList.add('active');
     flipping = false;
   }, 800);
+
   current = index;
 }
 
@@ -111,14 +115,32 @@ function prev() {
   show(prevIndex, 'left');
 }
 
-// swipe gesture
+// --- Swipe Gesture Fix ---
 let startX = 0;
-container.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+let isSwiping = false;
+
+container.style.touchAction = 'none'; // cegah browser gesture default
+
+container.addEventListener('touchstart', e => {
+  startX = e.touches[0].clientX;
+  isSwiping = true;
+});
+
+container.addEventListener('touchmove', e => {
+  if (!isSwiping) return;
+  e.preventDefault(); // cegah scroll horizontal default
+});
+
 container.addEventListener('touchend', e => {
+  if (!isSwiping) return;
   const diff = e.changedTouches[0].clientX - startX;
-  if (Math.abs(diff) > 50) diff < 0 ? next() : prev();
+  if (Math.abs(diff) > 50) {
+    diff < 0 ? next() : prev();
+  }
+  isSwiping = false;
 });
 </script>
+
 
 </body>
 </html>

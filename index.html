@@ -76,7 +76,7 @@ const TOTAL_PAGES = 12; // ubah sesuai jumlah halaman
 const container = document.getElementById('flipbook');
 for (let i = 1; i <= TOTAL_PAGES; i++) {
   const img = document.createElement('img');
-  img.src = IMG_FOLDER + BASE_NAME + i + '.png';
+  img.src = IMG_FOLDER + BASE_NAME + i + '.jpeg';
   if (i === 1) img.classList.add('active');
   container.appendChild(img);
 }

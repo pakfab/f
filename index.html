@@ -69,68 +69,56 @@
 <div id="flipbook"></div>
 
 <script>
-async function loadImages() {
-  const res = await fetch('./img/images.json');
-  const files = await res.json();
+const IMG_FOLDER = './img/';
+const BASE_NAME = 'FLIPBOOK PMB 20262027_20251015_153943_0000 ';
+const TOTAL_PAGES = 12; // ubah sesuai jumlah halaman
 
-  const container = document.getElementById('flipbook');
-  files.forEach((src, i) => {
-    const img = document.createElement('img');
-    img.src = './img/' + src;
-    if (i === 0) img.classList.add('active');
-    container.appendChild(img);
-  });
-
-  const imgs = container.querySelectorAll('img');
-  let current = 0;
-  let flipping = false;
-
-  function show(index, direction = 'right') {
-    if (flipping || index === current) return;
-    flipping = true;
-
-    const oldImg = imgs[current];
-    const newImg = imgs[index];
-
-    oldImg.classList.remove('active');
-    oldImg.classList.add(direction === 'right' ? 'flip-left' : 'flip-right');
-
-    setTimeout(() => {
-      oldImg.classList.remove('flip-left', 'flip-right');
-      oldImg.style.opacity = 0;
-      newImg.classList.add('active');
-      flipping = false;
-    }, 800);
-
-    current = index;
-  }
-
-  function next() {
-    const nextIndex = (current + 1) % imgs.length;
-    show(nextIndex, 'right');
-  }
-
-  function prev() {
-    const prevIndex = (current - 1 + imgs.length) % imgs.length;
-    show(prevIndex, 'left');
-  }
-
-  // swipe gesture
-  let startX = 0;
-  container.addEventListener('touchstart', e => startX = e.touches[0].clientX);
-  container.addEventListener('touchend', e => {
-    const diff = e.changedTouches[0].clientX - startX;
-    if (Math.abs(diff) > 50) diff < 0 ? next() : prev();
-  });
-
-  // keyboard (optional)
-  document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight') next();
-    if (e.key === 'ArrowLeft') prev();
-  });
+const container = document.getElementById('flipbook');
+for (let i = 1; i <= TOTAL_PAGES; i++) {
+  const img = document.createElement('img');
+  img.src = IMG_FOLDER + BASE_NAME + i + '.png';
+  if (i === 1) img.classList.add('active');
+  container.appendChild(img);
 }
 
-loadImages();
+const imgs = container.querySelectorAll('img');
+let current = 0;
+let flipping = false;
+
+function show(index, direction = 'right') {
+  if (flipping || index === current) return;
+  flipping = true;
+  const oldImg = imgs[current];
+  const newImg = imgs[index];
+  oldImg.classList.remove('active');
+  oldImg.classList.add(direction === 'right' ? 'flip-left' : 'flip-right');
+  setTimeout(() => {
+    oldImg.classList.remove('flip-left', 'flip-right');
+    oldImg.style.opacity = 0;
+    newImg.classList.add('active');
+    flipping = false;
+  }, 800);
+  current = index;
+}
+
+function next() {
+  const nextIndex = (current + 1) % imgs.length;
+  show(nextIndex, 'right');
+}
+
+function prev() {
+  const prevIndex = (current - 1 + imgs.length) % imgs.length;
+  show(prevIndex, 'left');
+}
+
+// swipe gesture
+let startX = 0;
+container.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+container.addEventListener('touchend', e => {
+  const diff = e.changedTouches[0].clientX - startX;
+  if (Math.abs(diff) > 50) diff < 0 ? next() : prev();
+});
 </script>
+
 </body>
 </html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Profil SMA Islam Al Azhar 16 Semarang</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="viewer">
+    <div class="page left" id="leftPage" aria-hidden="true"></div>
+    <div class="page right" id="rightPage"></div>
+
+    <button class="nav prev" id="prevBtn" title="Previous (←)">&larr;</button>
+    <button class="nav next" id="nextBtn" title="Next (→)">&rarr;</button>
+
+    <div class="controls">
+      <button id="playPause">Play</button>
+      <label>Autoplay interval:
+        <input id="interval" type="number" min="1000" value="2500" /> ms
+      </label>
+      <button id="fullscreen">Fullscreen</button>
+    </div>
+
+    <div class="thumbnails" id="thumbs" aria-hidden="false"></div>
+  </main>
+
+  <script src="script.js" defer></script>
+</body>
+</html>

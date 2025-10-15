@@ -1,30 +1,112 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Profil SMA Islam Al Azhar 16 Semarang</title>
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flipbook PMB SMAZA 2025</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #111;
+    height: 100%;
+    width: 100%;
+  }
+
+  #flipbook {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #flipbook img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.6s ease, opacity 0.6s ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  #flipbook img.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+</style>
 </head>
 <body>
-  <main class="viewer">
-    <div class="page left" id="leftPage" aria-hidden="true"></div>
-    <div class="page right" id="rightPage"></div>
+<div id="flipbook"></div>
 
-    <button class="nav prev" id="prevBtn" title="Previous (←)">&larr;</button>
-    <button class="nav next" id="nextBtn" title="Next (→)">&rarr;</button>
+<script>
+  // Konfigurasi
+  const IMG_FOLDER = './img/';
+  const TOTAL_PAGES = 12; // ganti sesuai jumlah gambar
+  const BASE_NAME = 'FLIPBOOK PMB 20262027_20251015_153943_0000 '; // nama dasar file
 
-    <div class="controls">
-      <button id="playPause">Play</button>
-      <label>Autoplay interval:
-        <input id="interval" type="number" min="1000" value="2500" /> ms
-      </label>
-      <button id="fullscreen">Fullscreen</button>
-    </div>
+  // Generate nama file otomatis
+  const images = Array.from({ length: TOTAL_PAGES }, (_, i) => 
+    `${BASE_NAME}${i + 1}.png`
+  );
 
-    <div class="thumbnails" id="thumbs" aria-hidden="false"></div>
-  </main>
+  const container = document.getElementById('flipbook');
+  let currentIndex = 0;
 
-  <script src="script.js" defer></script>
+  // Buat elemen img untuk semua halaman
+  images.forEach((src, i) => {
+    const img = document.createElement('img');
+    img.src = IMG_FOLDER + src;
+    img.classList.toggle('hidden', i !== 0);
+    container.appendChild(img);
+  });
+
+  const imgs = container.querySelectorAll('img');
+
+  // Fungsi tampilkan halaman
+  function showPage(index) {
+    imgs.forEach((img, i) => {
+      img.classList.toggle('hidden', i !== index);
+    });
+  }
+
+  // Deteksi swipe
+  let startX = 0;
+  let endX = 0;
+
+  container.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+  });
+
+  container.addEventListener('touchend', e => {
+    endX = e.changedTouches[0].clientX;
+    const diff = endX - startX;
+    if (Math.abs(diff) > 50) {
+      if (diff < 0) nextPage();
+      else prevPage();
+    }
+  });
+
+  // Fungsi navigasi halaman
+  function nextPage() {
+    currentIndex = (currentIndex + 1) % images.length;
+    showPage(currentIndex);
+  }
+
+  function prevPage() {
+    currentIndex = (currentIndex - 1 + images.length) % images.length;
+    showPage(currentIndex);
+  }
+
+  // Keyboard opsional (boleh hapus kalau tak perlu)
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') nextPage();
+    if (e.key === 'ArrowLeft') prevPage();
+  });
+</script>
 </body>
 </html>
